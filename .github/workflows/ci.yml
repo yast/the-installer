@@ -261,11 +261,11 @@ jobs:
       run:  cd cypress && npm install && npx cypress info && cd -
 
     - name: D-Installer smoke test
-      run:  curl http://localhost:9090
+      run:  curl http://localhost:9090/cockpit/@localhost/d-installer/index.html
 
     - name: Run Cypress tests
       # run:  cd cypress && npx cypress run && cd -
-      run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
+      run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser /usr/bin/firefox --spec cypress/e2e/main_page.cy.js
 
 
   # finish:
