@@ -273,8 +273,8 @@ jobs:
       with:
         name: test-results
         path: |
-          cypress/cypress/screenshots
-          cypress/cypress/videos
+          cypress/cypress/screenshots/**/*
+          cypress/cypress/videos/**/*
 
 
   # finish:
