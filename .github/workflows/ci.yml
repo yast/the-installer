@@ -221,7 +221,6 @@ jobs:
 
     container:
       image: registry.opensuse.org/yast/head/containers_${{matrix.distro}}/yast-ruby
-      options: --shm-size=512m --ipc=host --privileged
 
     steps:
 
@@ -230,10 +229,8 @@ jobs:
 
     - name: Install packages
       run:  zypper --non-interactive install --no-recommends gcc gcc-c++ make openssl-devel ruby-devel
-            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0 MozillaFirefox chromium
-
-    - name: Firefox check
-      run:  rpm -ql MozillaFirefox
+            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0 chromium
+            adobe-sourcesans3-fonts gnu-unifont-bitmap-fonts google-opensans-fonts
 
     - name: Install Ruby gems
       run:  cd service && bundle config set --local path 'vendor/bundle' && bundle install && cd -
@@ -256,7 +253,7 @@ jobs:
       run:  ln -snfv `pwd`/web/dist /usr/share/cockpit/d-installer
 
     - name: Start Cockpit
-      run:  /usr/libexec/cockpit-ws --local-ssh --no-tls &
+      run:  /usr/libexec/cockpit-ws --local-session=/usr/bin/cockpit-bridge &
 
     - name: Install Cypress
       run:  cd cypress && npm install && npx cypress info && cd -
@@ -265,15 +262,19 @@ jobs:
       run:  curl http://localhost:9090/cockpit/@localhost/d-installer/index.html
 
     - name: Run Cypress tests
-      # run:  cd cypress && npx cypress run && cd -
-      run:  cd cypress && TERM=linux CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
+      run:  cd cypress && npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
+      env:
+        CYPRESS_BASE_URL: http://localhost:9090
+        TERM: linux
+
 
     - name: Upload test screenshots and videos
       uses: actions/upload-artifact@v3
       with:
         name: test-results
         path: |
-          cypress/videos/
+          cypress/cypress/screenshots
+          cypress/cypress/videos
 
 
   # finish:
