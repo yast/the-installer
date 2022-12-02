@@ -4,6 +4,8 @@
 // log into the D-Installer as root
 // TODO: optionally read the credentials from the environment
 Cypress.Commands.add('login', () => {
+  if (Cypress.env('SKIP_LOGIN')) return;
+
   // authenticate via API to make it faster
   let login = Cypress.env('LOGIN_USER') || 'root';
   let password = Cypress.env('LOGIN_PASSWORD') || 'linux';

@@ -212,22 +212,27 @@ jobs:
   #     run: /usr/bin/rubocop.*-1.24.1
 
   integration-tests:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
+        # TW is needed because of the Cockpit packages
         distro: [ "tumbleweed" ]
 
     container:
       image: registry.opensuse.org/yast/head/containers_${{matrix.distro}}/yast-ruby
+      # this option should avoid crashing the Chromium browser...
+      options: --ipc=host
 
     steps:
 
     - name: Git Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Install packages
+      # TODO: check which fonts are really needed
       run:  zypper --non-interactive install --no-recommends gcc gcc-c++ make openssl-devel ruby-devel
             npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0 chromium
             adobe-sourcesans3-fonts gnu-unifont-bitmap-fonts google-opensans-fonts
@@ -238,16 +243,23 @@ jobs:
     - name: Install D-Bus configuration
       run:  cp service/share/dbus.conf /usr/share/dbus-1/system.d/org.opensuse.DInstaller.conf
 
+    - name: Set D-Bus testing configuration
+      # copy a simplified ALP config file, it skips the product selection at the beginning
+      run:  cp playwright/fixtures/d-installer.yaml service/etc/d-installer.yaml
+
     - name: Start D-Bus
       run:  dbus-daemon --system --print-address
 
     - name: Start D-Bus services
-      # here is a potential race condition, but as building the frontend
-      # and installing Cypress takes quite long time it should never happen™
-      run:  cd service && (bundle exec bin/d-installer &) && cd -
+      # TODO: here is a potential race condition, but as building the frontend
+      # and installing Playwright takes quite long time it should never happen™
+      run:  cd service && (bundle exec bin/d-installer > service.log 2>&1 &) && cd -
 
     - name: Build frontend
       run:  cd web && npm install && make && cd -
+
+    - name: D-Bus services log
+      run:  cat service/service.log
 
     - name: Install frontend
       run:  ln -snfv `pwd`/web/dist /usr/share/cockpit/d-installer
@@ -256,6 +268,8 @@ jobs:
       run:  /usr/libexec/cockpit-ws --local-session=/usr/bin/cockpit-bridge &
 
     - name: Install Cypress
+      # when running in Docker locally do this:
+      # export CYPRESS_CACHE_FOLDER=/tmp; chmod a+rwx /root
       run:  cd cypress && npm install && npx cypress info && cd -
 
     - name: D-Installer smoke test
@@ -264,13 +278,13 @@ jobs:
     - name: Run Cypress tests
       run:  cd cypress && npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js && cd -
       env:
-        CYPRESS_BASE_URL: http://localhost:9090
+        # user authentication is not required when cockpit runs a local session
+        CYPRESS_SKIP_LOGIN: true
         TERM: linux
-
 
     - name: Upload test screenshots and videos
       uses: actions/upload-artifact@v3
-      if: failure()
+      if: always()
       with:
         name: test-results
         path: |

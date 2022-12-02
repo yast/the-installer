@@ -5,9 +5,6 @@ describe('The login page', () => {
     cy.main_page();
   });
 
-  // TODO: skip these tests when the D-Installer is running locally
-  //       (https://localhost:9090)
-
   it('allows root to login', () => {
     let login = Cypress.env('LOGIN_USER') || 'root';
     let password = Cypress.env('LOGIN_PASSWORD') || 'linux';
