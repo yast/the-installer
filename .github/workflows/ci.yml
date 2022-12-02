@@ -266,7 +266,7 @@ jobs:
 
     - name: Run Cypress tests
       # run:  cd cypress && npx cypress run && cd -
-      run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
+      run:  cd cypress && TERM=linux CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
 
     - name: Upload test screenshots and videos
       uses: actions/upload-artifact@v3
