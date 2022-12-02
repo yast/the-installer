@@ -221,7 +221,7 @@ jobs:
 
     container:
       image: registry.opensuse.org/yast/head/containers_${{matrix.distro}}/yast-ruby
-      options: --shm-size=512m --ipc=host
+      options: --shm-size=512m --ipc=host --privileged
 
     steps:
 
@@ -267,6 +267,13 @@ jobs:
     - name: Run Cypress tests
       # run:  cd cypress && npx cypress run && cd -
       run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
+
+    - name: Upload test screenshots and videos
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          cypress/videos/
 
 
   # finish:
