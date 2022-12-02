@@ -262,7 +262,7 @@ jobs:
       run:  curl http://localhost:9090/cockpit/@localhost/d-installer/index.html
 
     - name: Run Cypress tests
-      run:  cd cypress && npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
+      run:  cd cypress && npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js && cd -
       env:
         CYPRESS_BASE_URL: http://localhost:9090
         TERM: linux
