@@ -229,7 +229,7 @@ jobs:
 
     - name: Install packages
       run:  zypper --non-interactive install gcc gcc-c++ make openssl-devel ruby-devel
-            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0 firefox
+            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0
 
     - name: Install Ruby gems
       run:  cd service && bundle config set --local path 'vendor/bundle' && bundle install && cd -
@@ -257,9 +257,12 @@ jobs:
     - name: Install Cypress
       run:  cd cypress && npm install && npx cypress info && cd -
 
+    - name: D-Installer smoke test
+      run:  curl http://localhost:9090
+
     - name: Run Cypress tests
       # run:  cd cypress && npx cypress run && cd -
-      run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser firefox --spec cypress/e2e/main_page.cy.js
+      run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --spec cypress/e2e/main_page.cy.js
 
 
   # finish:
