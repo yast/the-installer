@@ -228,8 +228,11 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Install packages
-      run:  zypper --non-interactive install gcc gcc-c++ make openssl-devel ruby-devel
-            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0 firefox chromium
+      run:  zypper --non-interactive install --no-recommends gcc gcc-c++ make openssl-devel ruby-devel
+            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0 MozillaFirefox chromium
+
+    - name: Firefox check
+      run:  rpm -ql MozillaFirefox
 
     - name: Install Ruby gems
       run:  cd service && bundle config set --local path 'vendor/bundle' && bundle install && cd -
@@ -262,7 +265,7 @@ jobs:
 
     - name: Run Cypress tests
       # run:  cd cypress && npx cypress run && cd -
-      run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --spec cypress/e2e/main_page.cy.js
+      run:  cd cypress && CYPRESS_BASE_URL=http://localhost:9090 npx cypress run --browser chromium --spec cypress/e2e/main_page.cy.js
 
 
   # finish:
