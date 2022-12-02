@@ -229,7 +229,7 @@ jobs:
 
     - name: Install packages
       run:  zypper --non-interactive install gcc gcc-c++ make openssl-devel ruby-devel
-            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0
+            npm augeas-devel cockpit dbus-1 xorg-x11-server libgtk-3-0 firefox chromium
 
     - name: Install Ruby gems
       run:  cd service && bundle config set --local path 'vendor/bundle' && bundle install && cd -
