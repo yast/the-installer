@@ -1,6 +1,7 @@
 const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
+  
   defaultCommandTimeout: 15000,
   // better video quality for recording ("false" or range 0-51, the default is 32)
   videoCompression: 25,
