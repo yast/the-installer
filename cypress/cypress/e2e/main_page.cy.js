@@ -3,7 +3,7 @@
 describe('The main page', () => {
   // login and go to the main page once for all tests to make it faster
   before(() => {
-    cy.login();
+    if (!Cypress.env('SKIP_LOGIN')) cy.login();
     cy.main_page();
   })
 

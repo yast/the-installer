@@ -1,10 +1,9 @@
 /// <reference types="cypress" />
 
-
 describe('D-Installer', () => {
   // login and go to the main page once for all tests to make it faster
   before(() => {
-    cy.login();
+    if (!Cypress.env('SKIP_LOGIN')) cy.login();
     cy.main_page();
   })
 
@@ -12,7 +11,8 @@ describe('D-Installer', () => {
 
   it('sets the root password', () => {
     cy.get('.overview-users p').contains('Root password is').find('button').click();
-    cy.get('#rootPassword').type('d-installer');
+    cy.get('#password').type('d-installer');
+    cy.get('#passwordConfirmation').type('d-installer');
     cy.get('button[type="submit"]').click();
 
     // the dialog is closed
