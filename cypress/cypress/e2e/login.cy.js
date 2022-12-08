@@ -1,11 +1,11 @@
 /// <reference types="cypress" />
 
-if (!Cypress.env('SKIP_LOGIN')) {
-  describe('The login page', () => {
-    beforeEach(() => {
-      cy.main_page();
-    });
+describe('The login page', () => {
+  beforeEach(() => {
+    cy.main_page();
+  });
 
+  if (!Cypress.env('SKIP_LOGIN')) {
     it('allows root to login', () => {
 
       let login = Cypress.env('LOGIN_USER') || 'root';
@@ -30,5 +30,5 @@ if (!Cypress.env('SKIP_LOGIN')) {
       // takes more time
       cy.get('#login-error-message', { timeout: 10000 }).should('not.be.empty');
     })
-  })
-}
+  }
+})
