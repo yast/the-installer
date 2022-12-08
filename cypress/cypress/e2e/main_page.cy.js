@@ -5,6 +5,7 @@ describe('The main page', () => {
   beforeEach(() => {
     if (!Cypress.env('SKIP_LOGIN')) cy.login();
     cy.main_page();
+    cy.wait(10000);
   })
 
   it('sets the page title', () => {
