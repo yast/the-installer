@@ -245,7 +245,7 @@ jobs:
 
     - name: Set D-Bus testing configuration
       # copy a simplified ALP config file, it skips the product selection at the beginning
-      run:  cp playwright/fixtures/d-installer.yaml service/etc/d-installer.yaml
+      run:  cp cypress/fixtures/d-installer.yaml service/etc/d-installer.yaml
 
     - name: Start D-Bus
       run:  dbus-daemon --system --print-address
