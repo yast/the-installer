@@ -1,7 +1,7 @@
 products:
   ALP:
     name: SUSE ALP ContainerHost OS
-    archs: x86_64,aarch64
+    archs: x86_64,aarch64,s390
     description: 'The Adaptable Linux Platform (ALP), the next generation of Linux,
       allow users to focus on their workloads while abstracting from the hardware
       and the application layer. The preview of ContainerHost OS is one of the
@@ -157,6 +157,10 @@ ALP:
         archs: x86_64
       - url: https://download.opensuse.org/repositories/SUSE:/ALP/standard/
         archs: aarch64
+      - url: https://download.opensuse.org/repositories/SUSE:/ALP/standard/
+        archs: s390
+      - url: https://download.opensuse.org/repositories/SUSE:/ALP:/zSystems/standard/
+        archs: s390
     mandatory_patterns:
       - alp_base
       - alp_base_zypper
@@ -166,7 +170,6 @@ ALP:
     optional_patterns: null # no optional pattern shared
     mandatory_packages:
       - device-mapper # Apparently needed if devices at /dev/mapper are used at boot (eg. FDE)
-      - fde-tools # Needed for FDE with TPM, hardcoded here temporarily
       - libtss2-tcti-device0 # Same than fde-tools
     optional_packages: null
     base_product: ALP
