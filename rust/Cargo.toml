@@ -7,4 +7,7 @@ members = [
   "agama-locale-data",
   "agama-settings"
 ]
+exclude = [
+  "tui-bond-config"
+]
 
