@@ -4,7 +4,10 @@
 
 use agama_lib::error::ServiceError;
 use agama_lib::install_settings::Scope;
+use agama_lib::network::settings::BondSettings;
 use agama_lib::network::settings::NetworkConnection;
+use agama_settings::{settings::Settings, SettingObject, SettingValue};
+use std::collections::HashMap;
 use std::time::Duration;
 use tui_realm_stdlib::Label;
 use tuirealm::StateValue;
@@ -88,6 +91,21 @@ impl Model {
             available_devices: vec![],
             bond_members: vec![],
         }
+    }
+
+    fn add_bond_connection(
+        &mut self,
+        name: String,
+        members: Vec<String>,
+    ) -> Result<(), ServiceError> {
+        let mut conn = NetworkConnection::default();
+        conn.id = name.to_string();
+        conn.bond = Some(BondSettings {
+            ports: members.clone(),
+            options: "".to_string(),
+        });
+        self.settings.connections.push(conn);
+        Ok(())
     }
 }
 
@@ -270,8 +288,8 @@ impl Update<Msg> for Model {
                 None
             }
             Msg::SaveChanges => {
-                println!("Saving the bond: {}", self.bond_name());
-                println!("Bond members are: {}", self.bond_members().join(","));
+                self.add_bond_connection(self.bond_name(), self.bond_members());
+                futures::executor::block_on(self.save_settings());
 
                 None
             }
