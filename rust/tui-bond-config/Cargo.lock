@@ -1803,6 +1803,7 @@ name = "tui-bond-config"
 version = "0.1.0"
 dependencies = [
  "agama-lib",
+ "agama-settings",
  "futures",
  "tokio",
  "tokio-stream",
