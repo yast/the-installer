@@ -100,9 +100,12 @@ impl Model {
     ) -> Result<(), ServiceError> {
         let mut conn = NetworkConnection::default();
         conn.id = name.to_string();
+        conn.interface = Some(name.to_string());
+        conn.method4 = Some("auto".to_string());
+        conn.method6 = Some("auto".to_string());
         conn.bond = Some(BondSettings {
             ports: members.clone(),
-            options: "".to_string(),
+            options: "mode=active-backup".to_string(),
         });
         self.settings.connections.push(conn);
         Ok(())
