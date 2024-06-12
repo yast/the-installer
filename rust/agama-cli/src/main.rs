@@ -5,6 +5,7 @@ mod commands;
 mod config;
 mod error;
 mod logs;
+mod monitor;
 mod printers;
 mod profile;
 mod progress;
@@ -18,6 +19,7 @@ use auth::run as run_auth_cmd;
 use commands::Commands;
 use config::run as run_config_cmd;
 use logs::run as run_logs_cmd;
+use monitor::run as run_monitor_cmd;
 use printers::Format;
 use profile::run as run_profile_cmd;
 use progress::InstallerProgress;
@@ -145,6 +147,7 @@ async fn run_command(cli: Cli) -> anyhow::Result<()> {
         Commands::Logs(subcommand) => run_logs_cmd(subcommand).await,
         Commands::Auth(subcommand) => run_auth_cmd(subcommand).await,
         Commands::Download { url } => crate::profile::download(&url, std::io::stdout()),
+        Commands::Monitor => run_monitor_cmd().await,
     }
 }
 

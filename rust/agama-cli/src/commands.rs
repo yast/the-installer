@@ -84,4 +84,7 @@ pub enum Commands {
         /// URL pointing to file for download
         url: String,
     },
+
+    /// Monitor Agama server
+    Monitor
 }
