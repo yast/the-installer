@@ -83,13 +83,12 @@ pub async fn run(client: BaseHTTPClient, subcommand: LogsCommands) -> anyhow::Re
 
 /// Whatewer passed in destination formed into an absolute path with archive name
 ///
-/// # Arguments:
-/// * destination
-///     - if None then a default is returned
-///     - if a path to a directory then a default file name for the archive will be appended to the
-///     path
-///     - if path with a file name then it is used as is for resulting archive, just extension will
-///     be appended later on (depends on used compression)
+/// * `destination`: destination path.
+///     - If None then a default is returned.
+///     - If a path to a directory then a default file name for the archive will be appended to the
+///       path.
+///     - If path with a file name then it is used as is for resulting archive, just extension will
+///       be appended later on (depends on used compression).
 fn parse_destination(destination: Option<PathBuf>) -> Result<PathBuf, io::Error> {
     let err = io::Error::new(io::ErrorKind::InvalidInput, "Invalid destination path");
     let mut buffer = destination.unwrap_or(PathBuf::from(format!(

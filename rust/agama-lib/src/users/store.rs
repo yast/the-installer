@@ -77,7 +77,6 @@ impl UsersStore {
             full_name: settings.full_name.clone().unwrap_or_default(),
             autologin: settings.autologin.unwrap_or_default(),
             password: settings.password.clone().unwrap_or_default(),
-            ..Default::default()
         };
         self.users_client.set_first_user(&first_user).await?;
         Ok(())
