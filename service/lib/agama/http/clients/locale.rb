@@ -25,11 +25,12 @@ require "agama/http/clients/base"
 module Agama
   module HTTP
     module Clients
-      # HTTP client to interact with the scripts API.
-      class Scripts < Base
-        # Runs the scripts
-        def run(group)
-          Net::HTTP.post(uri("scripts/run"), group.to_json, headers)
+      # HTTP client to interact with the locale API.
+      class Locale < Base
+
+        # Finishes the locales installation
+        def finish
+          Net::HTTP.post(uri("l10n/finish"), {}, headers)
         end
       end
     end

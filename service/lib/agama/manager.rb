@@ -30,9 +30,9 @@ require "agama/with_progress"
 require "agama/installation_phase"
 require "agama/service_status_recorder"
 require "agama/dbus/service_status"
-require "agama/dbus/clients/locale"
 require "agama/dbus/clients/software"
 require "agama/dbus/clients/storage"
+require "agama/http/clients/locale"
 require "agama/helpers"
 
 Yast.import "Stage"
@@ -181,7 +181,7 @@ module Agama
     #
     # @return [DBus::Clients::Locale]
     def language
-      DBus::Clients::Locale.instance
+      @language ||= HTTP::Clients::Locale.new
     end
 
     # Users client

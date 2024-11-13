@@ -19,17 +19,34 @@
 # To contact SUSE LLC about this file by physical or electronic mail, you may
 # find current contact information at www.suse.com.
 
+require "uri"
 require "net/http"
-require "agama/http/clients/base"
+require "json"
 
 module Agama
   module HTTP
     module Clients
       # HTTP client to interact with the scripts API.
-      class Scripts < Base
-        # Runs the scripts
-        def run(group)
-          Net::HTTP.post(uri("scripts/run"), group.to_json, headers)
+      class Base
+        def initialize
+          @base_url = "http://localhost/api/"
+        end
+
+      private
+
+        def uri(path)
+          URI.join(@base_url, path)
+        end
+
+        def headers
+          @headers = {
+            "Content-Type": "application/json",
+            Authorization:  "Bearer #{auth_token}"
+          }
+        end
+
+        def auth_token
+          File.read("/run/agama/token")
         end
       end
     end
