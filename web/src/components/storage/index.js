@@ -20,6 +20,7 @@
  * find current contact information at www.suse.com.
  */
 
+export { default as StoragePage } from "./StoragePage";
 export { default as ProposalPage } from "./ProposalPage";
 export { default as ProposalSettingsSection } from "./ProposalSettingsSection";
 export { default as ProposalTransactionalInfo } from "./ProposalTransactionalInfo";

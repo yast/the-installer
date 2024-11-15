@@ -23,7 +23,7 @@
 import React from "react";
 import BootSelection from "~/components/storage/BootSelection";
 import SpacePolicySelection from "~/components/storage/SpacePolicySelection";
-import { DeviceSelection, ISCSIPage, ProposalPage } from "~/components/storage";
+import { DeviceSelection, ISCSIPage, ProposalPage, StoragePage } from "~/components/storage";
 
 import { Route } from "~/types/routes";
 import { N_ } from "~/i18n";
@@ -52,7 +52,7 @@ const routes = (): Route => ({
   children: [
     {
       index: true,
-      element: <ProposalPage />,
+      element: <StoragePage />,
     },
     {
       path: PATHS.targetDevice,

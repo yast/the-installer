@@ -37,7 +37,7 @@ const label = (drive: DriveElement): string => {
 
 const spacePolicyEntry = (drive: DriveElement): SpacePolicy => {
   return SPACE_POLICIES.find((p) => p.id === drive.spacePolicy);
-}
+};
 
 const deleteTextFor = (partitions) => {
   const mandatory = partitions.filter((p) => p.delete).length;
@@ -75,7 +75,6 @@ const oldContentActionsDescription = (drive: DriveElement): string => {
 
   if (policyLabel) return _(policyLabel);
 
-
   const partitions = drive.partitions.filter((p) => p.name);
   const deleteText = deleteTextFor(partitions);
   const resizeText = resizeTextFor(partitions);
@@ -98,11 +97,10 @@ const oldContentActionsDescription = (drive: DriveElement): string => {
  * partitions.
  */
 const contentDescription = (drive: DriveElement): string => {
-  const partitions = drive.partitions.filter((p) => !p.name)
+  const partitions = drive.partitions.filter((p) => !p.name);
 
   // FIXME: this is one of the several cases we need to handle better
   if (partitions.length === 0) return "";
-
 
   const mountPaths = partitions.map((p) => formattedPath(p.mountPath));
   return sprintf(
@@ -111,15 +109,10 @@ const contentDescription = (drive: DriveElement): string => {
     n_(
       "A new partition will be created for %s",
       "New partitions will be created for %s",
-      mountPaths.length
+      mountPaths.length,
     ),
-    formatList(mountPaths)
+    formatList(mountPaths),
   );
 };
 
-export {
-  label,
-  spacePolicyEntry,
-  oldContentActionsDescription,
-  contentDescription
-};
+export { label, spacePolicyEntry, oldContentActionsDescription, contentDescription };
