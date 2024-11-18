@@ -74,4 +74,9 @@ impl SoftwareHTTPClient {
         };
         self.set_config(&config).await
     }
+
+    /// Refreshes the software repositories.
+    pub async fn probe(&self) -> Result<(), ServiceError> {
+        self.client.post_void("/software/probe", &()).await
+    }
 }
