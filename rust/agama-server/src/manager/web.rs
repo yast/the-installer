@@ -25,10 +25,11 @@
 //! * `manager_service` which returns the Axum service.
 //! * `manager_stream` which offers an stream that emits the manager events coming from D-Bus.
 
+use super::backend::ManagerServiceClient;
+use crate::{error::Error, web::Event};
 use agama_lib::{
-    error::ServiceError,
     logs,
-    manager::{InstallationPhase, InstallerStatus, ManagerClient},
+    manager::{InstallationPhase, InstallerStatus},
     proxies::Manager1Proxy,
 };
 use axum::{
@@ -43,18 +44,9 @@ use std::pin::Pin;
 use tokio_stream::{Stream, StreamExt};
 use tokio_util::io::ReaderStream;
 
-use crate::{
-    error::Error,
-    web::{
-        common::{progress_router, service_status_router},
-        Event,
-    },
-};
-
 #[derive(Clone)]
-pub struct ManagerState<'a> {
-    dbus: zbus::Connection,
-    manager: ManagerClient<'a>,
+pub struct ManagerState {
+    backend: ManagerServiceClient,
 }
 
 /// Returns a stream that emits manager related events coming from D-Bus.
@@ -86,25 +78,16 @@ pub async fn manager_stream(
     Ok(Box::pin(stream))
 }
 
-/// Sets up and returns the axum service for the manager module
-pub async fn manager_service(dbus: zbus::Connection) -> Result<Router, ServiceError> {
-    const DBUS_SERVICE: &str = "org.opensuse.Agama.Manager1";
-    const DBUS_PATH: &str = "/org/opensuse/Agama/Manager1";
-
-    let status_router = service_status_router(&dbus, DBUS_SERVICE, DBUS_PATH).await?;
-    let progress_router = progress_router(&dbus, DBUS_SERVICE, DBUS_PATH).await?;
-    let manager = ManagerClient::new(dbus.clone()).await?;
-    let state = ManagerState { manager, dbus };
-    Ok(Router::new()
+pub fn manager_router(client: ManagerServiceClient) -> Router {
+    let state = ManagerState { backend: client };
+    Router::new()
         .route("/probe", post(probe_action))
         .route("/probe_sync", post(probe_sync_action))
         .route("/install", post(install_action))
         .route("/finish", post(finish_action))
         .route("/installer", get(installer_status))
         .nest("/logs", logs_router())
-        .merge(status_router)
-        .merge(progress_router)
-        .with_state(state))
+        .with_state(state)
 }
 
 /// Starts the probing process.
@@ -122,19 +105,10 @@ pub async fn manager_service(dbus: zbus::Connection) -> Result<Router, ServiceEr
        )
     )
 )]
-async fn probe_action(State(state): State<ManagerState<'_>>) -> Result<(), Error> {
-    let dbus = state.dbus.clone();
+async fn probe_action(State(state): State<ManagerState>) -> Result<(), Error> {
+    let client = state.backend.clone();
     tokio::spawn(async move {
-        let result = dbus
-            .call_method(
-                Some("org.opensuse.Agama.Manager1"),
-                "/org/opensuse/Agama/Manager1",
-                Some("org.opensuse.Agama.Manager1"),
-                "Probe",
-                &(),
-            )
-            .await;
-        if let Err(error) = result {
+        if let Err(error) = client.probe().await {
             tracing::error!("Could not start probing: {:?}", error);
         }
     });
@@ -151,8 +125,8 @@ async fn probe_action(State(state): State<ManagerState<'_>>) -> Result<(), Error
       (status = 200, description = "Probing done.")
     )
 )]
-async fn probe_sync_action(State(state): State<ManagerState<'_>>) -> Result<(), Error> {
-    state.manager.probe().await?;
+async fn probe_sync_action(State(state): State<ManagerState>) -> Result<(), Error> {
+    state.backend.probe().await.unwrap();
     Ok(())
 }
 
@@ -165,8 +139,8 @@ async fn probe_sync_action(State(state): State<ManagerState<'_>>) -> Result<(), 
       (status = 200, description = "The installation process was started.")
     )
 )]
-async fn install_action(State(state): State<ManagerState<'_>>) -> Result<(), Error> {
-    state.manager.install().await?;
+async fn install_action(State(state): State<ManagerState>) -> Result<(), Error> {
+    state.backend.commit().await.unwrap();
     Ok(())
 }
 
@@ -179,8 +153,8 @@ async fn install_action(State(state): State<ManagerState<'_>>) -> Result<(), Err
       (status = 200, description = "The installation tasks are executed.")
     )
 )]
-async fn finish_action(State(state): State<ManagerState<'_>>) -> Result<(), Error> {
-    state.manager.finish().await?;
+async fn finish_action(State(state): State<ManagerState>) -> Result<(), Error> {
+    state.backend.finish().await.unwrap();
     Ok(())
 }
 
@@ -194,25 +168,14 @@ async fn finish_action(State(state): State<ManagerState<'_>>) -> Result<(), Erro
     )
 )]
 async fn installer_status(
-    State(state): State<ManagerState<'_>>,
+    State(state): State<ManagerState>,
 ) -> Result<Json<InstallerStatus>, Error> {
-    let phase = state.manager.current_installation_phase().await?;
-    // CanInstall gets blocked during installation
-    let can_install = match phase {
-        InstallationPhase::Install => false,
-        _ => state.manager.can_install().await?,
-    };
-    let status = InstallerStatus {
-        phase,
-        can_install,
-        is_busy: state.manager.is_busy().await,
-        use_iguana: state.manager.use_iguana().await?,
-    };
+    let status = state.backend.get_state().await.unwrap();
     Ok(Json(status))
 }
 
 /// Creates router for handling /logs/* endpoints
-fn logs_router() -> Router<ManagerState<'static>> {
+fn logs_router() -> Router<ManagerState> {
     Router::new()
         .route("/store", get(download_logs))
         .route("/list", get(list_logs))

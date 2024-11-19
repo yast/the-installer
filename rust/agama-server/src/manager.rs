@@ -18,5 +18,22 @@
 // To contact SUSE LLC about this file by physical or electronic mail, you may
 // find current contact information at www.suse.com.
 
+use agama_lib::{base_http_client::BaseHTTPClient, error::ServiceError};
+
 pub mod web;
-pub use web::manager_service;
+use axum::Router;
+use web::manager_router;
+
+use crate::{products::ProductsRegistry, web::EventsSender};
+pub mod backend;
+
+// TODO: the `service` function should receive the information that might be needed to set up the
+// service. What about creating an `Application` struct that holdes the HTTP client, the D-Bus
+// connection, and configuration, etc.?
+pub async fn service(http: BaseHTTPClient, events: EventsSender) -> Result<Router, ServiceError> {
+    // TODO: the products registry should be injected
+    let products = ProductsRegistry::load().unwrap();
+    let backend = backend::ManagerService::new(products, http, events);
+    let client = backend.listen().await;
+    Ok(manager_router(client))
+}

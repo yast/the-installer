@@ -27,7 +27,7 @@
 use crate::{
     error::Error,
     l10n::web::l10n_service,
-    manager::web::{manager_service, manager_stream},
+    manager,
     network::{web::network_service, NetworkManagerAdapter},
     questions::web::{questions_service, questions_stream},
     scripts::web::scripts_service,
@@ -48,7 +48,7 @@ mod service;
 mod state;
 mod ws;
 
-use agama_lib::{connection, error::ServiceError};
+use agama_lib::{base_http_client::BaseHTTPClient, connection, error::ServiceError};
 pub use config::ServiceConfig;
 pub use event::{Event, EventsReceiver, EventsSender};
 pub use service::MainServiceBuilder;
@@ -74,9 +74,12 @@ where
         .await
         .expect("Could not connect to NetworkManager to read the configuration");
 
+    let http = BaseHTTPClient::default();
+    let http = http.authenticated()?;
+
     let router = MainServiceBuilder::new(events.clone(), web_ui_dir)
         .add_service("/l10n", l10n_service(dbus.clone(), events.clone()).await?)
-        .add_service("/manager", manager_service(dbus.clone()).await?)
+        .add_service("/manager", manager::service(http, events.clone()).await?)
         .add_service("/software", software_service(dbus.clone()).await?)
         .add_service("/storage", storage_service(dbus.clone()).await?)
         .add_service("/network", network_service(network_adapter, events).await?)
@@ -107,25 +110,6 @@ pub async fn run_monitor(events: EventsSender) -> Result<(), ServiceError> {
 async fn run_events_monitor(dbus: zbus::Connection, events: EventsSender) -> Result<(), Error> {
     let mut stream = StreamMap::new();
 
-    stream.insert("manager", manager_stream(dbus.clone()).await?);
-    stream.insert(
-        "manager-status",
-        service_status_stream(
-            dbus.clone(),
-            "org.opensuse.Agama.Manager1",
-            "/org/opensuse/Agama/Manager1",
-        )
-        .await?,
-    );
-    stream.insert(
-        "manager-progress",
-        progress_stream(
-            dbus.clone(),
-            "org.opensuse.Agama.Manager1",
-            "/org/opensuse/Agama/Manager1",
-        )
-        .await?,
-    );
     for (id, user_stream) in users_streams(dbus.clone()).await? {
         stream.insert(id, user_stream);
     }
