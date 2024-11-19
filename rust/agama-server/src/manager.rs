@@ -20,8 +20,11 @@
 
 use agama_lib::{base_http_client::BaseHTTPClient, error::ServiceError};
 
+pub mod error;
 pub mod web;
+
 use axum::Router;
+pub use error::ManagerError;
 use web::manager_router;
 
 use crate::{products::ProductsRegistry, web::EventsSender};

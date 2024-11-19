@@ -126,7 +126,7 @@ async fn probe_action(State(state): State<ManagerState>) -> Result<(), Error> {
     )
 )]
 async fn probe_sync_action(State(state): State<ManagerState>) -> Result<(), Error> {
-    state.backend.probe().await.unwrap();
+    state.backend.probe().await?;
     Ok(())
 }
 
@@ -140,7 +140,7 @@ async fn probe_sync_action(State(state): State<ManagerState>) -> Result<(), Erro
     )
 )]
 async fn install_action(State(state): State<ManagerState>) -> Result<(), Error> {
-    state.backend.commit().await.unwrap();
+    state.backend.commit().await?;
     Ok(())
 }
 
@@ -154,7 +154,7 @@ async fn install_action(State(state): State<ManagerState>) -> Result<(), Error> 
     )
 )]
 async fn finish_action(State(state): State<ManagerState>) -> Result<(), Error> {
-    state.backend.finish().await.unwrap();
+    state.backend.finish().await?;
     Ok(())
 }
 
@@ -170,7 +170,7 @@ async fn finish_action(State(state): State<ManagerState>) -> Result<(), Error> {
 async fn installer_status(
     State(state): State<ManagerState>,
 ) -> Result<Json<InstallerStatus>, Error> {
-    let status = state.backend.get_state().await.unwrap();
+    let status = state.backend.get_state().await?;
     Ok(Json(status))
 }
 

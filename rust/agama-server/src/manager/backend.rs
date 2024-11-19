@@ -24,27 +24,16 @@ use crate::products::ProductsRegistry;
 use crate::web::{Event, EventsSender};
 use agama_lib::{
     base_http_client::BaseHTTPClient,
-    error::ServiceError,
     manager::{InstallationPhase, InstallerStatus},
     software::SoftwareHTTPClient,
     storage::http_client::StorageHTTPClient,
 };
 use tokio::sync::{mpsc, oneshot};
 
+use super::ManagerError;
+
 pub type ManagerActionSender = mpsc::UnboundedSender<ManagerAction>;
 pub type ManagerActionReceiver = mpsc::UnboundedReceiver<ManagerAction>;
-
-#[derive(thiserror::Error, Debug)]
-pub enum ManagerError {
-    #[error("Service error: {0}")]
-    Service(#[from] ServiceError),
-    #[error("Could not send the action to the service: {0}")]
-    Send(#[from] mpsc::error::SendError<ManagerAction>),
-    #[error("Could not receive the result: {0}")]
-    RecvResult(#[from] oneshot::error::RecvError),
-    #[error("Could not send the result")]
-    SendResult,
-}
 
 /// Actions that the manager service can perform.
 #[derive(Debug)]
