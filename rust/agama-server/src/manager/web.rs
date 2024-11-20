@@ -26,10 +26,13 @@
 //! * `manager_stream` which offers an stream that emits the manager events coming from D-Bus.
 
 use agama_lib::{
+    base_http_client::BaseHTTPClient,
     error::ServiceError,
+    install_settings::InstallSettings,
     logs,
     manager::{InstallationPhase, InstallerStatus, ManagerClient},
     proxies::Manager1Proxy,
+    Store,
 };
 use axum::{
     body::Body,
@@ -55,6 +58,7 @@ use crate::{
 pub struct ManagerState<'a> {
     dbus: zbus::Connection,
     manager: ManagerClient<'a>,
+    http: BaseHTTPClient,
 }
 
 /// Returns a stream that emits manager related events coming from D-Bus.
@@ -94,13 +98,19 @@ pub async fn manager_service(dbus: zbus::Connection) -> Result<Router, ServiceEr
     let status_router = service_status_router(&dbus, DBUS_SERVICE, DBUS_PATH).await?;
     let progress_router = progress_router(&dbus, DBUS_SERVICE, DBUS_PATH).await?;
     let manager = ManagerClient::new(dbus.clone()).await?;
-    let state = ManagerState { manager, dbus };
+    let http = BaseHTTPClient::default().authenticated()?;
+    let state = ManagerState {
+        manager,
+        dbus,
+        http,
+    };
     Ok(Router::new()
         .route("/probe", post(probe_action))
         .route("/probe_sync", post(probe_sync_action))
         .route("/install", post(install_action))
         .route("/finish", post(finish_action))
         .route("/installer", get(installer_status))
+        .route("/config", get(config).put(set_config))
         .nest("/logs", logs_router())
         .merge(status_router)
         .merge(progress_router)
@@ -272,4 +282,20 @@ async fn download_logs() -> impl IntoResponse {
 )]
 pub async fn list_logs() -> Json<logs::LogsLists> {
     Json(logs::list())
+}
+
+// FIXME: this is a temorary solution. Most probably this logic should be part of the server's code.
+pub async fn config(State(state): State<ManagerState<'_>>) -> Result<Json<InstallSettings>, Error> {
+    let store = Store::new(state.http.clone()).await?;
+    let settings = store.load().await?;
+    Ok(Json(settings))
+}
+
+// FIXME: this is a temorary solution. Most probably this logic should be part of the server's code.
+pub async fn set_config(
+    State(state): State<ManagerState<'_>>,
+    Json(settings): Json<InstallSettings>,
+) -> Result<(), Error> {
+    let store = Store::new(state.http.clone()).await?;
+    Ok(store.store(&settings).await?)
 }
