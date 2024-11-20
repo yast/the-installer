@@ -22,9 +22,10 @@
 
 import { _ } from "~/i18n";
 import React, { useState } from "react";
-import { Button, Stack } from "@patternfly/react-core";
+import { Button, Stack, Split } from "@patternfly/react-core";
 import { CodeEditor, Language } from '@patternfly/react-code-editor';
 import { useConfigMutation, useConfig } from '~/queries/config';
+import { Link } from "react-router-dom";
 
 const ConfigEditor = ({ sections }): React.ReactNode => {
   const setConfig = useConfigMutation();
@@ -51,9 +52,12 @@ const ConfigEditor = ({ sections }): React.ReactNode => {
   return (
     <Stack hasGutter>
       <CodeEditor height="65vh" onChange={onChange} language={Language.json} code={configJson} />
-      <Button onClick={updateConfig}>
-        {_("Do it!")}
-      </Button>
+      <Split hasGutter>
+        <Link to={{ path: ".", index: false }}>{_("Cancel")}</Link>
+        <Button onClick={updateConfig}>
+          {_("Save")}
+        </Button>
+      </Split>
     </Stack>
   );
 };
