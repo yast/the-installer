@@ -22,6 +22,7 @@
 use crate::base_http_client::{BaseHTTPClient, BaseHTTPClientError};
 use crate::storage::StorageSettings;
 
+#[derive(Clone)]
 pub struct StorageHTTPClient {
     client: BaseHTTPClient,
 }

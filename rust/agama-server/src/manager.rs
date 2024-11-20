@@ -20,6 +20,7 @@
 
 use agama_lib::{base_http_client::BaseHTTPClient, error::ServiceError};
 
+pub mod backend;
 pub mod error;
 pub mod web;
 
@@ -28,7 +29,6 @@ pub use error::ManagerError;
 use web::manager_router;
 
 use crate::{products::ProductsRegistry, web::EventsSender};
-pub mod backend;
 
 // TODO: the `service` function should receive the information that might be needed to set up the
 // service. What about creating an `Application` struct that holdes the HTTP client, the D-Bus

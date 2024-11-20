@@ -36,4 +36,8 @@ pub enum ManagerError {
     RecvResult(#[from] oneshot::error::RecvError),
     #[error("Could not send the result")]
     SendResult,
+    #[error("Could not join the background task: {0}")]
+    Join(#[from] tokio::task::JoinError),
+    #[error("The service task is busy")]
+    Busy,
 }

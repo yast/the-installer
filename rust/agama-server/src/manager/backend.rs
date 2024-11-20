@@ -21,19 +21,24 @@
 //! Implements the logic for the manager service.
 
 use crate::products::ProductsRegistry;
+use crate::services::{InstallerService, ServiceStatusManager};
 use crate::web::{Event, EventsSender};
+use agama_lib::progress::ProgressSummary;
 use agama_lib::{
     base_http_client::BaseHTTPClient,
     manager::{InstallationPhase, InstallerStatus},
     software::SoftwareHTTPClient,
     storage::http_client::StorageHTTPClient,
 };
+use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, oneshot};
 
 use super::ManagerError;
 
 pub type ManagerActionSender = mpsc::UnboundedSender<ManagerAction>;
 pub type ManagerActionReceiver = mpsc::UnboundedReceiver<ManagerAction>;
+
+const SERVICE_NAME: &str = "org.opensuse.Agama.Manager1";
 
 /// Actions that the manager service can perform.
 #[derive(Debug)]
@@ -46,13 +51,14 @@ pub enum ManagerAction {
     Finish,
     /// Returns the installation status.
     GetState(oneshot::Sender<InstallerStatus>),
+    /// Returns the current progress.
+    GetProgress(oneshot::Sender<Option<ProgressSummary>>),
 }
 
-// TODO: somehow duplicated from agama-server/web/common.rs
-#[derive(Clone, Copy, PartialEq)]
-pub enum ServiceStatus {
-    Idle = 0,
-    Busy = 1,
+#[derive(Clone)]
+struct ManagerState {
+    services: Services,
+    phase: InstallationPhase,
 }
 
 /// Main service for the installation process.
@@ -60,27 +66,31 @@ pub enum ServiceStatus {
 /// It is responsible for orchestrating the installation process. It may execute YaST2 clients or
 /// call to other services through D-Bus or HTTP.
 pub struct ManagerService {
-    pub phase: InstallationPhase,
-    pub status: ServiceStatus,
+    progress: Arc<Mutex<ServiceStatusManager>>,
     recv: mpsc::UnboundedReceiver<ManagerAction>,
     sender: mpsc::UnboundedSender<ManagerAction>,
     events: EventsSender,
-    services: Services,
     products: ProductsRegistry,
+    manager_state: ManagerState,
 }
 
 impl ManagerService {
     pub fn new(products: ProductsRegistry, http: BaseHTTPClient, events: EventsSender) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
+        let progress = ServiceStatusManager::new(SERVICE_NAME, events.clone());
+
+        let state = ManagerState {
+            phase: InstallationPhase::Startup,
+            services: Services::new(http),
+        };
 
         Self {
             recv: rx,
             sender: tx,
             products,
             events,
-            services: Services::new(http),
-            phase: InstallationPhase::Startup,
-            status: ServiceStatus::Idle,
+            progress: Arc::new(Mutex::new(progress)),
+            manager_state: state,
         }
     }
 
@@ -90,23 +100,40 @@ impl ManagerService {
 
     pub async fn startup(&mut self) -> Result<(), ManagerError> {
         tracing::info!("Starting the manager service");
-        self.change_status(ServiceStatus::Busy);
-        self.phase = InstallationPhase::Startup;
+
         if !self.products.is_multiproduct() {
             // TODO: autoselect the product
             self.probe().await?;
         }
-        self.change_status(ServiceStatus::Idle);
+
         Ok(())
     }
 
     pub async fn probe(&mut self) -> Result<(), ManagerError> {
         tracing::info!("Probing the system");
-        self.change_status(ServiceStatus::Busy);
+        let steps = vec!["Analyze disks", "Configure software"];
+        // TODO: change the phase in the call to "run_in_background", when we are sure the
+        // service is not blocked.
         self.change_phase(InstallationPhase::Config);
-        self.services.software.probe().await?;
-        self.services.storage.probe().await?;
-        self.change_status(ServiceStatus::Idle);
+
+        self.run_in_background(|_events, progress, state| async move {
+            {
+                // TODO: implement a macro for this
+                let mut progress_manager = progress.lock().unwrap();
+                progress_manager.start(steps.as_slice());
+            }
+            state.services.software.probe().await?;
+            {
+                let mut progress_manager = progress.lock().unwrap();
+                progress_manager.next();
+            }
+            state.services.storage.probe().await?;
+            {
+                progress.lock().unwrap().finish();
+            }
+            Ok(())
+        });
+
         Ok(())
     }
 
@@ -122,32 +149,15 @@ impl ManagerService {
         &self,
         tx: oneshot::Sender<InstallerStatus>,
     ) -> Result<(), ManagerError> {
+        let progress = self.progress.lock().unwrap();
         let status = InstallerStatus {
-            is_busy: self.status == ServiceStatus::Busy,
-            use_iguana: false,
+            is_busy: progress.is_busy(),
+            // TODO: implement use_iguana and can_install
             can_install: false,
-            phase: self.phase,
+            use_iguana: false,
+            phase: self.manager_state.phase,
         };
         tx.send(status).map_err(|_| ManagerError::SendResult)
-    }
-
-    fn change_status(&mut self, status: ServiceStatus) {
-        let event = Event::ServiceStatusChanged {
-            service: "manager".to_string(),
-            status: (status as u32),
-        };
-        if let Err(error) = self.events.send(event) {
-            tracing::error!("Could not send the event: {error}");
-        }
-        self.status = status;
-    }
-
-    fn change_phase(&mut self, phase: InstallationPhase) {
-        let event = Event::InstallationPhaseChanged { phase };
-        if let Err(error) = self.events.send(event) {
-            tracing::error!("Could not send the event: {error}");
-        }
-        self.phase = phase;
     }
 
     /// Starts the manager loop and returns a client.
@@ -176,6 +186,7 @@ impl ManagerService {
 
             if let Err(error) = self.dispatch(action).await {
                 tracing::error!("Manager dispatch error: {error}");
+                // Send the message back.
             }
         }
     }
@@ -185,17 +196,47 @@ impl ManagerService {
             ManagerAction::Probe => {
                 self.probe().await?;
             }
+
             ManagerAction::Commit => {
                 self.commit().await?;
             }
+
             ManagerAction::Finish => {
                 self.finish().await?;
             }
+
             ManagerAction::GetState(tx) => {
                 self.get_state(tx).await?;
             }
+
+            ManagerAction::GetProgress(tx) => {
+                let progress = self.progress.lock().unwrap();
+                let _ = tx.send(progress.get_progress());
+            }
         }
         Ok(())
+    }
+
+    fn change_phase(&mut self, phase: InstallationPhase) {
+        let event = Event::InstallationPhaseChanged { phase };
+        let _ = self.events.send(event);
+        self.manager_state.phase = phase;
+    }
+}
+
+impl InstallerService<ManagerState> for ManagerService {
+    type Error = ManagerError;
+
+    fn state(&self) -> ManagerState {
+        self.manager_state.clone()
+    }
+
+    fn progress(&self) -> Arc<Mutex<ServiceStatusManager>> {
+        Arc::clone(&self.progress)
+    }
+
+    fn events(&self) -> EventsSender {
+        self.events.clone()
     }
 }
 
@@ -233,9 +274,16 @@ impl ManagerServiceClient {
         self.actions.send(ManagerAction::GetState(tx))?;
         Ok(rx.await?)
     }
+
+    pub async fn get_progress(&self) -> Result<Option<ProgressSummary>, ManagerError> {
+        let (tx, rx) = oneshot::channel();
+        self.actions.send(ManagerAction::GetProgress(tx))?;
+        Ok(rx.await?)
+    }
 }
 
 /// Services used by the manager service.
+#[derive(Clone)]
 pub struct Services {
     software: SoftwareHTTPClient,
     storage: StorageHTTPClient,

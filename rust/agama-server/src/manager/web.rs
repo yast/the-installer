@@ -30,6 +30,7 @@ use crate::{error::Error, web::Event};
 use agama_lib::{
     logs,
     manager::{InstallationPhase, InstallerStatus},
+    progress::ProgressSummary,
     proxies::Manager1Proxy,
 };
 use axum::{
@@ -86,8 +87,17 @@ pub fn manager_router(client: ManagerServiceClient) -> Router {
         .route("/install", post(install_action))
         .route("/finish", post(finish_action))
         .route("/installer", get(installer_status))
+        .route("/progress", get(get_progress))
         .nest("/logs", logs_router())
         .with_state(state)
+}
+
+async fn get_progress(State(state): State<ManagerState>) -> Result<Json<ProgressSummary>, Error> {
+    let summary = match state.backend.get_progress().await? {
+        Some(summary) => summary,
+        None => ProgressSummary::finished(),
+    };
+    Ok(Json(summary))
 }
 
 /// Starts the probing process.

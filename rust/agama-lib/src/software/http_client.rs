@@ -22,6 +22,7 @@ use crate::base_http_client::{BaseHTTPClient, BaseHTTPClientError};
 use crate::software::model::SoftwareConfig;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct SoftwareHTTPClient {
     client: BaseHTTPClient,
 }
