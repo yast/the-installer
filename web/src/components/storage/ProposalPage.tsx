@@ -108,7 +108,7 @@ export default function ProposalPage() {
         <h2>{_("Storage")}</h2>
       </Page.Header>
 
-      <Page.Content>
+      <Page.Content editorSections={["storage"]}>
         <Grid hasGutter>
           <GridItem sm={12}>
             <ProposalTransactionalInfo settings={settings} />
