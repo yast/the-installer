@@ -97,7 +97,7 @@ const Progress = ({ steps, step, firstStep, detail }) => {
       )}
       {steps.map((description: StepProps["description"], idx: number) => {
         return (
-          <ProgressStep key={idx} {...stepProperties(idx + 1)}>
+          <ProgressStep key={idx} {...stepProperties(idx)}>
             {description}
           </ProgressStep>
         );
