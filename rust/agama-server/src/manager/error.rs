@@ -24,6 +24,8 @@
 use agama_lib::base_http_client::BaseHTTPClientError;
 use tokio::sync::{mpsc, oneshot};
 
+use crate::services::ServiceStatusError;
+
 use super::backend::ManagerAction;
 
 #[derive(thiserror::Error, Debug)]
@@ -40,4 +42,6 @@ pub enum ManagerError {
     Join(#[from] tokio::task::JoinError),
     #[error("The service task is busy")]
     Busy,
+    #[error("Service status error: {0}")]
+    ServiceStatus(#[from] ServiceStatusError),
 }

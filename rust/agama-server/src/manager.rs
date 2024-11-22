@@ -37,6 +37,6 @@ pub async fn service(http: BaseHTTPClient, events: EventsSender) -> Result<Route
     // TODO: the products registry should be injected
     let products = ProductsRegistry::load().unwrap();
     let backend = backend::ManagerService::new(products, http, events);
-    let client = backend.listen().await;
+    let client = backend.start().await;
     Ok(manager_router(client))
 }
