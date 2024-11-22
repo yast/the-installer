@@ -262,8 +262,7 @@ impl ProgressSequence {
     /// Create a new progress sequence with the given steps.
     ///
     /// * `steps`: The steps to create the sequence from.
-    pub fn new(steps: &[&str]) -> Self {
-        let steps = steps.iter().map(|s| s.to_string()).collect();
+    pub fn new(steps: Vec<String>) -> Self {
         Self { steps, current: 0 }
     }
 
