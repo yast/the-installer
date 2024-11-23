@@ -53,11 +53,11 @@ serde_yaml = "0.9.34"
 
 [[bin]]
 name = "agama-dbus-server"
-path = "src/agama-dbus-server.rs"
+path = "src/bin/agama-dbus-server.rs"
 
 [[bin]]
 name = "agama-web-server"
-path = "src/agama-web-server.rs"
+path = "src/bin/agama-web-server.rs"
 
 [dev-dependencies]
 http-body-util = "0.1.2"
