@@ -22,7 +22,7 @@ use agama_lib::{manager::InstallerStatus, progress::ProgressSummary};
 use tokio::sync::oneshot;
 
 use super::{ManagerAction, ManagerActionSender, ManagerError};
-use crate::services::ServiceStatusClient;
+use crate::service_status::ServiceStatusClient;
 
 /// Client to interact with the manager service.
 ///

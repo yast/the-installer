@@ -19,7 +19,7 @@
 // find current contact information at www.suse.com.
 
 use crate::products::ProductsRegistry;
-use crate::services::{ServiceStatusClient, ServiceStatusManager};
+use crate::service_status::{ServiceStatusClient, ServiceStatusManager};
 use crate::web::{Event, EventsSender};
 use agama_lib::{
     base_http_client::BaseHTTPClient,
@@ -119,13 +119,11 @@ impl ManagerServiceServer {
     ///
     /// The manager receives actions requests from the client using a channel.
     pub async fn start(self) -> ManagerServiceClient {
-        let status = ServiceStatusManager::new(SERVICE_NAME, self.events.clone());
-        let status = status.start();
-
-        let client = ManagerServiceClient::new(self.sender.clone(), status.clone());
+        let status_client = ServiceStatusManager::start(SERVICE_NAME, self.events.clone());
+        let client = ManagerServiceClient::new(self.sender.clone(), status_client.clone());
 
         tokio::spawn(async move {
-            self.run(status).await;
+            self.run(status_client).await;
         });
 
         client

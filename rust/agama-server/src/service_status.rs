@@ -18,6 +18,9 @@
 // To contact SUSE LLC about this file by physical or electronic mail, you may
 // find current contact information at www.suse.com.
 
+//! Implements logic to keep track of the status of a service.
+//!
+//! This behavior can be reused by different services, e.g., the [manager service](crate::manager::backend::ManagerService).
 use crate::web::{Event, EventsSender};
 use agama_lib::progress::{Progress, ProgressSequence, ProgressSummary};
 use tokio::sync::{
@@ -52,6 +55,29 @@ pub enum ServiceStatus {
     Busy = 1,
 }
 
+/// Builds and starts a service status server.
+///
+/// See the [ManagerService::start](crate::manager::backend::ManagerService::start) method for an
+/// example.
+pub struct ServiceStatusManager {}
+
+impl ServiceStatusManager {
+    pub fn start(name: &str, events: EventsSender) -> ServiceStatusClient {
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let server = ServiceStatusServer {
+            name: name.to_string(),
+            events,
+            progress: None,
+            // NOTE: would it be OK to derive the status from the progress
+            status: ServiceStatus::Idle,
+            receiver,
+            sender,
+        };
+
+        server.start()
+    }
+}
+
 #[derive(Clone)]
 pub struct ServiceStatusClient(ActionSender);
 
@@ -84,7 +110,7 @@ impl ServiceStatusClient {
 /// It holds the progress sequence and the service status. Additionally, it emits
 /// events when any of them change.
 #[derive(Debug)]
-pub struct ServiceStatusManager {
+pub struct ServiceStatusServer {
     pub name: String,
     events: EventsSender,
     progress: Option<ProgressSequence>,
@@ -93,24 +119,11 @@ pub struct ServiceStatusManager {
     receiver: ActionReceiver,
 }
 
-impl ServiceStatusManager {
-    pub fn new(name: &str, events: EventsSender) -> Self {
-        let (sender, receiver) = mpsc::unbounded_channel();
-        Self {
-            name: name.to_string(),
-            events,
-            progress: None,
-            // NOTE: would it be OK to derive the status from the progress
-            status: ServiceStatus::Idle,
-            receiver,
-            sender,
-        }
-    }
-
+impl ServiceStatusServer {
     pub fn start(self) -> ServiceStatusClient {
         let channel = self.sender.clone();
         tokio::spawn(async move {
-            ServiceStatusManager::run(self).await;
+            ServiceStatusServer::run(self).await;
         });
         ServiceStatusClient(channel)
     }

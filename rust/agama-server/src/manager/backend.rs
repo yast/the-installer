@@ -33,7 +33,7 @@
 mod client;
 mod server;
 
-use crate::{products::ProductsRegistry, services::ServiceStatusError, web::EventsSender};
+use crate::{products::ProductsRegistry, service_status::ServiceStatusError, web::EventsSender};
 use agama_lib::{
     base_http_client::{BaseHTTPClient, BaseHTTPClientError},
     manager::InstallationPhase,

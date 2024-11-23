@@ -28,7 +28,7 @@ pub mod network;
 pub mod products;
 pub mod questions;
 pub mod scripts;
-pub mod services;
+pub mod service_status;
 pub mod software;
 pub mod storage;
 pub mod users;
