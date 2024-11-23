@@ -21,11 +21,10 @@
 use agama_lib::{base_http_client::BaseHTTPClient, error::ServiceError};
 
 pub mod backend;
-pub mod error;
 pub mod web;
 
 use axum::Router;
-pub use error::ManagerError;
+pub use backend::ManagerError;
 use web::manager_router;
 
 use crate::{products::ProductsRegistry, web::EventsSender};
@@ -34,9 +33,9 @@ use crate::{products::ProductsRegistry, web::EventsSender};
 // service. What about creating an `Application` struct that holdes the HTTP client, the D-Bus
 // connection, and configuration, etc.?
 pub async fn service(http: BaseHTTPClient, events: EventsSender) -> Result<Router, ServiceError> {
-    // TODO: the products registry should be injected
+    // TODO: the products registry should be injected and it might live behind a shared reference
+    // if other services need to access it.
     let products = ProductsRegistry::load().unwrap();
-    let backend = backend::ManagerService::new(products, http, events);
-    let client = backend.start().await;
+    let client = backend::ManagerService::start(products, http, events).await;
     Ok(manager_router(client))
 }

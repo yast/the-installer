@@ -19,256 +19,92 @@
 // find current contact information at www.suse.com.
 
 //! Implements the logic for the manager service.
+//!
+//! This service is the responsible for orchestrating the installation process. It may execute YaST2
+//! clients or call to other services through D-Bus or HTTP.
+//!
+//! To improve responsiveness, the service uses Tokio's tasks to runs long-running operations in the
+//! background (e.g., the probing phase). However, only one of those tasks can run at a time. It
+//! works in this way by design, not because of a technical limitation.
+//!
+//! The service coordinates and shares the state where needed using a message passing channels. The
+//! interaction with the service is done through the [ManagerServiceClient] struct which hides the
+//! details of passing messages, offering a simpler interface.
+mod client;
+mod server;
 
-use crate::products::ProductsRegistry;
-use crate::services::{ServiceStatusClient, ServiceStatusManager};
-use crate::web::{Event, EventsSender};
-use agama_lib::progress::ProgressSummary;
+use crate::{products::ProductsRegistry, services::ServiceStatusError, web::EventsSender};
 use agama_lib::{
-    base_http_client::BaseHTTPClient,
-    manager::{InstallationPhase, InstallerStatus},
-    software::SoftwareHTTPClient,
-    storage::http_client::StorageHTTPClient,
+    base_http_client::{BaseHTTPClient, BaseHTTPClientError},
+    manager::InstallationPhase,
 };
+pub use client::ManagerServiceClient;
+pub use server::ManagerServiceServer;
+use server::{HTTPClients, ManagerAction};
 use tokio::sync::{mpsc, oneshot};
-
-use super::ManagerError;
 
 pub type ManagerActionSender = mpsc::UnboundedSender<ManagerAction>;
 pub type ManagerActionReceiver = mpsc::UnboundedReceiver<ManagerAction>;
 
-const SERVICE_NAME: &str = "org.opensuse.Agama.Manager1";
-
-/// Actions that the manager service can perform.
-#[derive(Debug)]
-pub enum ManagerAction {
-    /// Performs a probe.
-    Probe,
-    /// Starts the installation.
-    Commit,
-    /// Finishes the installation.
-    Finish,
-    /// Returns the installation status.
-    GetState(oneshot::Sender<InstallerStatus>),
+#[derive(thiserror::Error, Debug)]
+pub enum ManagerError {
+    #[error("HTTP client error: {0}")]
+    HTTPClient(#[from] BaseHTTPClientError),
+    #[error("Could not send the action to the service: {0}")]
+    Send(#[from] mpsc::error::SendError<ManagerAction>),
+    #[error("Could not receive the result: {0}")]
+    RecvResult(#[from] oneshot::error::RecvError),
+    #[error("Could not send the result")]
+    SendResult,
+    #[error("Could not join the background task: {0}")]
+    Join(#[from] tokio::task::JoinError),
+    #[error("The service task is busy")]
+    Busy,
+    #[error("Service status error: {0}")]
+    ServiceStatus(#[from] ServiceStatusError),
 }
 
-#[derive(Clone)]
-struct ManagerState {
-    http_clients: HTTPClients,
-    phase: InstallationPhase,
-}
-
-/// Main service for the installation process.
+/// Builds and starts the manager service.
 ///
-/// It is responsible for orchestrating the installation process. It may execute YaST2 clients or
-/// call to other services through D-Bus or HTTP.
-pub struct ManagerService {
-    recv: mpsc::UnboundedReceiver<ManagerAction>,
-    sender: mpsc::UnboundedSender<ManagerAction>,
-    events: EventsSender,
-    products: ProductsRegistry,
-    state: ManagerState,
-}
+/// ```no_run
+/// # use tokio_test;
+/// use agama_server::{
+///   manager::backend::ManagerService,
+///   products::ProductsRegistry, web::{EventsSender, Event}
+/// };
+/// use agama_lib::base_http_client::BaseHTTPClient;
+/// use tokio::sync::broadcast;
+///
+/// # tokio_test::block_on(async {
+/// let (events_tx, _events_rx) = broadcast::channel::<Event>(16);
+/// let http = BaseHTTPClient::default();
+/// let products = ProductsRegistry::load().unwrap();
+/// let client = ManagerService::start(products, http, events_tx).await;
+///
+/// client.probe().await.unwrap(); // Start probing.
+/// # });
+/// ```
+pub struct ManagerService {}
 
 impl ManagerService {
-    pub fn new(products: ProductsRegistry, http: BaseHTTPClient, events: EventsSender) -> Self {
+    /// Starts the manager service.
+    pub async fn start(
+        products: ProductsRegistry,
+        http: BaseHTTPClient,
+        events: EventsSender,
+    ) -> ManagerServiceClient {
         let (tx, rx) = mpsc::unbounded_channel();
 
-        let state = ManagerState {
+        let server = ManagerServiceServer {
+            recv: rx,
+            sender: tx,
+            events,
+            products,
             phase: InstallationPhase::Startup,
             http_clients: HTTPClients::new(http),
         };
 
-        Self {
-            recv: rx,
-            sender: tx,
-            products,
-            events,
-            state,
-        }
-    }
-
-    pub fn input(&self) -> mpsc::UnboundedSender<ManagerAction> {
-        self.sender.clone()
-    }
-
-    pub async fn startup(&mut self, status: ServiceStatusClient) -> Result<(), ManagerError> {
-        tracing::info!("Starting the manager service");
-
-        if !self.products.is_multiproduct() {
-            // TODO: autoselect the product
-            self.probe(status).await?;
-        }
-
-        Ok(())
-    }
-
-    pub async fn probe(&mut self, status: ServiceStatusClient) -> Result<(), ManagerError> {
-        tracing::info!("Probing the system");
-        let steps = vec![
-            "Analyze disks".to_string(),
-            "Configure software".to_string(),
-        ];
-
-        status.start_task(steps).await?;
-        self.change_phase(InstallationPhase::Config);
-
-        let services = self.state.http_clients.clone();
-        tokio::spawn(async move {
-            services.software.probe().await.unwrap();
-            let _ = status.next_step();
-            services.storage.probe().await.unwrap();
-            let _ = status.finish_task();
-        });
-
-        Ok(())
-    }
-
-    pub async fn commit(&mut self) -> Result<(), ManagerError> {
-        todo!()
-    }
-
-    pub async fn finish(&mut self) -> Result<(), ManagerError> {
-        todo!()
-    }
-
-    pub async fn get_state(
-        &self,
-        tx: oneshot::Sender<InstallerStatus>,
-        status: ServiceStatusClient,
-    ) -> Result<(), ManagerError> {
-        let status = status.get_progress().await.unwrap();
-        let installer_status = InstallerStatus {
-            is_busy: status.is_some(),
-            // TODO: implement use_iguana and can_install
-            can_install: false,
-            use_iguana: false,
-            phase: self.state.phase,
-        };
-        tx.send(installer_status)
-            .map_err(|_| ManagerError::SendResult)
-    }
-
-    /// Starts the manager loop and returns a client.
-    ///
-    /// The manager receives actions requests from the client using a channel.
-    pub async fn start(self) -> ManagerServiceClient {
-        let status = ServiceStatusManager::new(SERVICE_NAME, self.events.clone());
-        let status = status.start();
-
-        let client = ManagerServiceClient {
-            actions: self.sender.clone(),
-            status: status.clone(),
-        };
-
-        tokio::spawn(async move {
-            self.run(status).await;
-        });
-
-        client
-    }
-
-    async fn run(mut self, status: ServiceStatusClient) {
-        loop {
-            let action = self.recv.recv().await;
-            tracing::info!("manager dispatching action: {:?}", &action);
-            let Some(action) = action else {
-                tracing::error!("Manager action channel closed");
-                break;
-            };
-
-            if let Err(error) = self.dispatch(action, status.clone()).await {
-                tracing::error!("Manager dispatch error: {error}");
-                // Send the message back.
-            }
-        }
-    }
-
-    async fn dispatch(
-        &mut self,
-        action: ManagerAction,
-        status: ServiceStatusClient,
-    ) -> Result<(), ManagerError> {
-        match action {
-            ManagerAction::Probe => {
-                self.probe(status).await?;
-            }
-
-            ManagerAction::Commit => {
-                self.commit().await?;
-            }
-
-            ManagerAction::Finish => {
-                self.finish().await?;
-            }
-
-            ManagerAction::GetState(tx) => {
-                self.get_state(tx, status).await?;
-            }
-        }
-        Ok(())
-    }
-
-    fn change_phase(&mut self, phase: InstallationPhase) {
-        let event = Event::InstallationPhaseChanged { phase };
-        let _ = self.events.send(event);
-        self.state.phase = phase;
-    }
-}
-
-/// Client to interact with the manager service.
-///
-/// The communication between the service and the client is based on message passing. This client
-/// abstracts the details and offers a simple API.
-#[derive(Clone)]
-pub struct ManagerServiceClient {
-    actions: ManagerActionSender,
-    status: ServiceStatusClient,
-}
-
-impl ManagerServiceClient {
-    /// Performs a probe.
-    pub async fn probe(&self) -> Result<(), ManagerError> {
-        self.actions.send(ManagerAction::Probe)?;
-        Ok(())
-    }
-
-    /// Starts the installation.
-    pub async fn commit(&self) -> Result<(), ManagerError> {
-        self.actions.send(ManagerAction::Commit)?;
-        Ok(())
-    }
-
-    /// Finishes the installation.
-    pub async fn finish(&self) -> Result<(), ManagerError> {
-        self.actions.send(ManagerAction::Finish)?;
-        Ok(())
-    }
-
-    /// Get the installation status.
-    pub async fn get_state(&self) -> Result<InstallerStatus, ManagerError> {
-        let (tx, rx) = oneshot::channel();
-        self.actions.send(ManagerAction::GetState(tx))?;
-        Ok(rx.await?)
-    }
-
-    pub async fn get_progress(&self) -> Result<Option<ProgressSummary>, ManagerError> {
-        Ok(self.status.get_progress().await?)
-    }
-}
-
-/// Services used by the manager service.
-#[derive(Clone)]
-pub struct HTTPClients {
-    software: SoftwareHTTPClient,
-    storage: StorageHTTPClient,
-}
-
-impl HTTPClients {
-    pub fn new(http_base: BaseHTTPClient) -> Self {
-        Self {
-            software: SoftwareHTTPClient::new(http_base.clone()),
-            storage: StorageHTTPClient::new(http_base),
-        }
+        // TODO: run the startup if there is a single product. Actually, the products registry is not needed for the manager service later.
+        server.start().await
     }
 }
