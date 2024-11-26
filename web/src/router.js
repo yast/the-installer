@@ -33,8 +33,9 @@ import productsRoutes from "~/routes/products";
 import storageRoutes from "~/routes/storage";
 import softwareRoutes from "~/routes/software";
 import usersRoutes from "~/routes/users";
-import { ROOT as PATHS } from "./routes/paths";
+import { ROOT as ROOT_PATHS, USER as USER_PATHS } from "~/routes/paths";
 import { N_ } from "~/i18n";
+import { AuthStep } from "~/components/users";
 
 const rootRoutes = () => [
   {
@@ -51,7 +52,7 @@ const rootRoutes = () => [
 
 const protectedRoutes = () => [
   {
-    path: PATHS.root,
+    path: ROOT_PATHS.root,
     element: <App />,
     children: [
       {
@@ -66,7 +67,13 @@ const protectedRoutes = () => [
       },
       {
         element: <PlainLayout />,
-        children: [productsRoutes()],
+        children: [
+          productsRoutes(),
+          {
+            path: USER_PATHS.authStep,
+            element: <AuthStep />,
+          },
+        ],
       },
     ],
   },
@@ -78,11 +85,11 @@ const protectedRoutes = () => [
     ),
     children: [
       {
-        path: PATHS.installationProgress,
+        path: ROOT_PATHS.installationProgress,
         element: <InstallationProgress />,
       },
       {
-        path: PATHS.installationFinished,
+        path: ROOT_PATHS.installationFinished,
         element: <InstallationFinished />,
       },
     ],
@@ -93,7 +100,7 @@ const router = () =>
   createHashRouter([
     {
       exact: true,
-      path: PATHS.login,
+      path: ROOT_PATHS.login,
       element: (
         <PlainLayout mountHeader={false}>
           <LoginPage />
@@ -101,10 +108,10 @@ const router = () =>
       ),
     },
     {
-      path: PATHS.root,
+      path: ROOT_PATHS.root,
       element: <Protected />,
       children: [...protectedRoutes()],
     },
   ]);
 
-export { router, rootRoutes, PATHS };
+export { router, rootRoutes, ROOT_PATHS };

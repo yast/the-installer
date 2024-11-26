@@ -25,3 +25,4 @@ export { default as RootAuthMethods } from "./RootAuthMethods";
 export { default as RootPasswordPopup } from "./RootPasswordPopup";
 export { default as RootSSHKeyPopup } from "./RootSSHKeyPopup";
 export { default as UsersPage } from "./UsersPage";
+export { default as AuthStep } from "./AuthStep";
