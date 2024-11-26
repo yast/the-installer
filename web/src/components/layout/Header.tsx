@@ -46,7 +46,7 @@ import { _ } from "~/i18n";
 import { InstallationPhase } from "~/types/status";
 import { useInstallerStatus } from "~/queries/status";
 import { InstallButton, InstallerOptions, IssuesLink } from "~/components/core";
-import { useLocation } from "react-router-dom";
+import { useLocation, useMatches } from "react-router-dom";
 import { ROOT as PATHS } from "~/routes/paths";
 
 export type HeaderProps = {
@@ -122,7 +122,10 @@ export default function Header({
   background = "dark",
 }: HeaderProps): React.ReactNode {
   const location = useLocation();
+  const matchedRoutes = useMatches();
   const { selectedProduct } = useProduct();
+  const route = matchedRoutes.at(-1);
+  const title = route?.handle?.title;
   const { phase } = useInstallerStatus({ suspense: true });
 
   const showInstallerOptions =
@@ -145,6 +148,8 @@ export default function Header({
       )}
       <MastheadMain>
         {showProductName && <MastheadBrand component="h1">{selectedProduct.name}</MastheadBrand>}
+        {/** FIXME: use i18n "_" */}
+        {title && <MastheadBrand component="h1">{title}</MastheadBrand>}
       </MastheadMain>
       <MastheadContent>
         <Toolbar isFullHeight>

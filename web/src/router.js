@@ -72,6 +72,9 @@ const protectedRoutes = () => [
           {
             path: USER_PATHS.authStep,
             element: <AuthStep />,
+            handle: {
+              title: N_("Provide user authentication"),
+            },
           },
         ],
       },

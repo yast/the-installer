@@ -25,19 +25,25 @@ import React from "react";
 import { Page } from "~/components/core";
 import FirstUserForm from "./RawFirstUserForm";
 import RawRootPasswordForm from "./RawRootPasswordForm";
+import { _ } from "~/i18n";
 
 function ProductSelectionPage() {
   return (
     <Page>
       <Page.Content>
         <Grid hasGutter>
+          <GridItem sm={12}>
+            {_(
+              "Please define the a user to log into the system and at least one authentication method for priviledged root user.",
+            )}
+          </GridItem>
           <GridItem sm={12} md={6}>
             <Page.Section title="User">
               <FirstUserForm />
             </Page.Section>
           </GridItem>
           <GridItem sm={12} md={6}>
-            <Page.Section title="Root auth method">
+            <Page.Section title="Auth methods for root">
               <RawRootPasswordForm />
             </Page.Section>
           </GridItem>
