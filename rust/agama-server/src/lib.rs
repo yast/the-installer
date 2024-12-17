@@ -25,6 +25,7 @@ pub mod l10n;
 pub mod logs;
 pub mod manager;
 pub mod network;
+pub mod products;
 pub mod questions;
 pub mod scripts;
 pub mod software;
@@ -32,3 +33,6 @@ pub mod storage;
 pub mod users;
 pub mod web;
 pub use web::service;
+
+pub mod common;
+pub mod software_ng;

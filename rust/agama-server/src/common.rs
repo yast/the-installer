@@ -18,24 +18,6 @@
 // To contact SUSE LLC about this file by physical or electronic mail, you may
 // find current contact information at www.suse.com.
 
-//! Implements a client to access Agama's storage service.
-use crate::base_http_client::{BaseHTTPClient, BaseHTTPClientError};
-use crate::storage::StorageSettings;
+//! Common functionality that can be shared across the package.
 
-pub struct StorageHTTPClient {
-    client: BaseHTTPClient,
-}
-
-impl StorageHTTPClient {
-    pub fn new(base: BaseHTTPClient) -> Self {
-        Self { client: base }
-    }
-
-    pub async fn get_config(&self) -> Result<StorageSettings, BaseHTTPClientError> {
-        self.client.get("/storage/config").await
-    }
-
-    pub async fn set_config(&self, config: &StorageSettings) -> Result<(), BaseHTTPClientError> {
-        self.client.put_void("/storage/config", config).await
-    }
-}
+pub(crate) mod backend;

@@ -18,24 +18,26 @@
 // To contact SUSE LLC about this file by physical or electronic mail, you may
 // find current contact information at www.suse.com.
 
-//! Implements a client to access Agama's storage service.
-use crate::base_http_client::{BaseHTTPClient, BaseHTTPClientError};
-use crate::storage::StorageSettings;
+pub(crate) mod backend;
+pub(crate) mod web;
 
-pub struct StorageHTTPClient {
-    client: BaseHTTPClient,
-}
+use std::sync::Arc;
 
-impl StorageHTTPClient {
-    pub fn new(base: BaseHTTPClient) -> Self {
-        Self { client: base }
-    }
+use axum::Router;
+use backend::SoftwareService;
+pub use backend::SoftwareServiceError;
+use tokio::sync::Mutex;
 
-    pub async fn get_config(&self) -> Result<StorageSettings, BaseHTTPClientError> {
-        self.client.get("/storage/config").await
-    }
+use crate::{products::ProductsRegistry, web::EventsSender};
 
-    pub async fn set_config(&self, config: &StorageSettings) -> Result<(), BaseHTTPClientError> {
-        self.client.put_void("/storage/config", config).await
-    }
+pub async fn software_ng_service(
+    events: EventsSender,
+    products: Arc<Mutex<ProductsRegistry>>,
+) -> Router {
+    let client = SoftwareService::start(events, products)
+        .await
+        .expect("Could not start the software service.");
+    web::software_router(client)
+        .await
+        .expect("Could not build the software router.")
 }
