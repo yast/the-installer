@@ -39,4 +39,8 @@ impl StorageHTTPClient {
     pub async fn set_config(&self, config: &StorageSettings) -> Result<(), ServiceError> {
         self.client.put_void("/storage/config", config).await
     }
+
+    pub async fn probe(&self) -> Result<(), ServiceError> {
+        self.client.post_void("/storage/probe", &()).await
+    }
 }

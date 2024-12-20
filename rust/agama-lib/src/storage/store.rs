@@ -42,6 +42,7 @@ impl StorageStore {
     }
 
     pub async fn store(&self, settings: &StorageSettings) -> Result<(), ServiceError> {
+        _ = self.storage_client.probe().await;
         self.storage_client.set_config(settings).await?;
         Ok(())
     }
