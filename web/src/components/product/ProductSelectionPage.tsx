@@ -36,7 +36,7 @@ import {
   Checkbox,
 } from "@patternfly/react-core";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Page, Popup } from "~/components/core";
+import { Page } from "~/components/core";
 import { Center } from "~/components/layout";
 import { useConfigMutation, useProduct, useRegistration } from "~/queries/software";
 import pfTextStyles from "@patternfly/react-styles/css/utilities/Text/text";
@@ -46,6 +46,7 @@ import { _ } from "~/i18n";
 import { PATHS } from "~/router";
 import { isEmpty } from "~/utils";
 import { Product } from "~/types/software";
+import EulaDialog from "./EulaDialog";
 
 const ResponsiveGridItem = ({ children }) => (
   <GridItem sm={10} smOffset={1} lg={8} lgOffset={2} xl={6} xlOffset={3}>
@@ -139,14 +140,7 @@ function ProductSelectionPage() {
   return (
     <Page>
       <Page.Content>
-        {showEula && (
-          <Popup isOpen={showEula}>
-            {_("Lorem ipsum")}
-            <Popup.Actions>
-              <Popup.Confirm onClick={() => setShowEula(false)} />
-            </Popup.Actions>
-          </Popup>
-        )}
+        {showEula && <EulaDialog onClose={() => setShowEula(false)} />}
         <Center>
           <Form id="productSelectionForm" onSubmit={onSubmit}>
             <Grid hasGutter>
