@@ -33,9 +33,10 @@ import {
   Stack,
   FormGroup,
   Button,
+  Checkbox,
 } from "@patternfly/react-core";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Page } from "~/components/core";
+import { Page, Popup } from "~/components/core";
 import { Center } from "~/components/layout";
 import { useConfigMutation, useProduct, useRegistration } from "~/queries/software";
 import pfTextStyles from "@patternfly/react-styles/css/utilities/Text/text";
@@ -44,6 +45,7 @@ import { sprintf } from "sprintf-js";
 import { _ } from "~/i18n";
 import { PATHS } from "~/router";
 import { isEmpty } from "~/utils";
+import { Product } from "~/types/software";
 
 const ResponsiveGridItem = ({ children }) => (
   <GridItem sm={10} smOffset={1} lg={8} lgOffset={2} xl={6} xlOffset={3}>
@@ -102,6 +104,10 @@ function ProductSelectionPage() {
   const registration = useRegistration();
   const { products, selectedProduct } = useProduct({ suspense: true });
   const [nextProduct, setNextProduct] = useState(selectedProduct);
+  // FIXME: should not be accepted by default first selectedProduct is accepted
+  // because it's a singleProduct iso.
+  const [eulaAccepted, setEulaAccepted] = useState(!!selectedProduct); // useState(selectedProduct.eula)
+  const [showEula, setShowEula] = useState(false); // useState(selectedProduct.eula)
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isEmpty(registration?.key)) return <Navigate to={PATHS.root} />;
@@ -115,11 +121,32 @@ function ProductSelectionPage() {
     }
   };
 
-  const isSelectionDisabled = !nextProduct || nextProduct === selectedProduct;
+  const selectProduct = (product: Product) => {
+    setNextProduct(product);
+    setEulaAccepted(!!selectedProduct && selectedProduct === product);
+  };
+
+  const hasSelectionChanged = nextProduct && nextProduct !== selectedProduct;
+  const hasEula = true; // nextProduct?.eula;
+  const isEulaCheckboxDisabled = hasEula && !hasSelectionChanged;
+  const isSelectionDisabled = !hasSelectionChanged || (hasEula && !eulaAccepted);
+
+  const [eulaTextStart, eulaTextLink, eulaTextEnd] = sprintf(
+    _("Understand and accept [%s EULA]"),
+    selectedProduct.name,
+  ).split(/[[\]]/);
 
   return (
     <Page>
       <Page.Content>
+        {showEula && (
+          <Popup isOpen={showEula}>
+            {_("Lorem ipsum")}
+            <Popup.Actions>
+              <Popup.Confirm onClick={() => setShowEula(false)} />
+            </Popup.Actions>
+          </Popup>
+        )}
         <Center>
           <Form id="productSelectionForm" onSubmit={onSubmit}>
             <Grid hasGutter>
@@ -131,7 +158,7 @@ function ProductSelectionPage() {
                         key={index}
                         product={product}
                         isChecked={nextProduct === product}
-                        onChange={() => setNextProduct(product)}
+                        onChange={() => selectProduct(product)}
                       />
                     ))}
                   </List>
@@ -143,6 +170,22 @@ function ProductSelectionPage() {
       </Page.Content>
       <Page.Actions>
         {selectedProduct && !isLoading && <BackLink />}
+        <Checkbox
+          isChecked={eulaAccepted}
+          onChange={(_, accepted) => setEulaAccepted(accepted)}
+          isDisabled={isEulaCheckboxDisabled}
+          id="eula-acceptance"
+          form="productSelectionForm"
+          label={
+            <>
+              {eulaTextStart}{" "}
+              <Button variant="link" isInline onClick={() => setShowEula(true)}>
+                {eulaTextLink}
+              </Button>{" "}
+              {eulaTextEnd}
+            </>
+          }
+        />
         <Page.Submit
           form="productSelectionForm"
           isDisabled={isSelectionDisabled}
