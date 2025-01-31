@@ -21,6 +21,10 @@ jobs:
     container:
       image: registry.opensuse.org/opensuse/tumbleweed:latest
 
+    env:
+      # to avoid Ruby UTF-8 errors (the default is "POSIX")
+      LC_ALL: en_US.UTF-8
+
     steps:
       - name: Local
         run: locale
