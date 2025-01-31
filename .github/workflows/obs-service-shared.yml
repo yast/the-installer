@@ -22,6 +22,8 @@ jobs:
       image: registry.opensuse.org/opensuse/tumbleweed:latest
 
     steps:
+      - name: Local
+        run: locale
       - name: Select OBS project
         id: obs_project
         run: |-
