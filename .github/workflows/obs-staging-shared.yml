@@ -84,11 +84,10 @@ jobs:
 
       - name: Update service revision
         # only when a tag has been pushed, or "release" branch updated
-        if: github.ref_type == 'tag' || github.ref_name == 'release'
+        if: (github.ref_type == 'tag' || github.ref_name == 'release') && inputs.service_file != ''
         run: |-
           echo "Updating revision to \"${{ github.ref_name }}\""
-          sed -i -e 's#<param name="revision">.*</param>#<param name="revision">${{ github.ref_name }}</param>#' _service
-        working-directory: ./${{ steps.obs_project.outputs.OBS_PROJECT }}/${{ inputs.package_name }}
+          sed -i -e 's#<param name="revision">.*</param>#<param name="revision">${{ github.ref_name }}</param>#' ${{ inputs.service_file }}
 
       - name: Copy optional service file
         # patch the URL in the file so it works also from forks, forks also by
