@@ -36,7 +36,7 @@ jobs:
       - name: Install DocBook tooling
         run: |
           sudo apt-get update
-          sudo apt-get --assume-yes --no-install-recommends install xmlto docbook-xsl xmlstarlet
+          sudo apt-get --assume-yes --no-install-recommends install xmlto docbook-xsl xmlstarlet libglib2.0-dev
 
       - name: Build HTML via DocBook
         run: make -C doc
