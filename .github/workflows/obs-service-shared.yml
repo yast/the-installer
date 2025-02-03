@@ -26,8 +26,6 @@ jobs:
       LC_ALL: en_US.UTF-8
 
     steps:
-      - name: Local
-        run: locale
       - name: Select OBS project
         id: obs_project
         run: |-
