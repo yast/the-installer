@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Thu Jan 30 21:47:35 UTC 2025 - Ladislav Slezák <lslezak@suse.com>
+
+- Just some testing "master" branch change
+
+-------------------------------------------------------------------
 Wed Jan 29 16:28:32 UTC 2025 - Josef Reidinger <jreidinger@suse.com>
 
 - Allow reading repository in /install directory on iso

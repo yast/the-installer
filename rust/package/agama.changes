@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Thu Jan 30 21:49:04 UTC 2025 - Ladislav Slezák <lslezak@suse.com>
+
+- Just some testing "master" branch change
+
+-------------------------------------------------------------------
 Fri Jan 24 09:33:31 UTC 2025 - Imobach Gonzalez Sosa <igonzalezsosa@suse.com>
 
 - Introduce a new installation phase "finish"
