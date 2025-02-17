@@ -2,6 +2,8 @@
 Description=Start root shell in a free terminal (usually tty2)
 # after setting the host name to correctly display it in the shell prompt
 After=agama-hostname.service
+# before tty2 is taken by the login service
+Before=getty@tty2.service
 
 [Service]
 ExecStart=openvt --verbose --wait bash

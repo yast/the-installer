@@ -153,6 +153,34 @@ rm -rf /usr/share/doc/packages/*
 du -h -s /usr/share/man
 rm -rf /usr/share/man/*
 
+# python is installed just because of a simple /usr/sbin/bcache-status script (bcache-tools package)
+# which is not used by libtorage-ng, yast2-storage-ng or agama
+python=$(rpm -q --whatprovides python3-base || true)
+
+if [ -n "$python" ]; then
+  echo "Python package: $python"
+  python_deps=$(rpm -e "$python" 2>&1 || true)
+  # avoid removing python accidentally because of some new unknown dependency
+  python_deps=$(echo "$python_deps" | grep -v -e "Failed dependencies" -e "needed by .* libpython" -e "needed by .* bcache-tools" || true)
+
+  if [ -z "$python_deps"]; then
+    echo "Removing Python..."
+    # remove libpython as well
+    rpm -e --nodeps "$python" $(rpm -qa | grep "^libpython3")
+  else
+    echo "Warning: Extra Python dependency detected:"
+    echo "$python_deps"
+    echo "Keeping the python packages installed"
+  fi
+fi
+
+# remove OpenGL support
+rpm -qa | grep ^Mesa | xargs rpm -e --nodeps
+
+# uninstall libyui-qt and libqt (pulled in by the YaST dependencies)
+rpm -q --whatprovides libyui-qt libyui-qt-pkg | xargs rpm -e --nodeps
+rpm -qa | grep ^libQt | xargs rpm -e --nodeps
+
 ## removing drivers and firmware makes the Live ISO about 370MiB smaller
 #
 # Agama does not use sound, added by icewm dependencies
