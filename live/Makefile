@@ -66,4 +66,11 @@ build: $(DESTDIR)
 check:
 	for i in ./test/*_test.*; do $${i}; done
 
-.PHONY: build all clean
+# Shellcheck reports lots of warnings, run it error-only mode first,
+# if that succeeds run it in full mode but ignore the failures.
+# TODO: fix the warnings and run it in more strict mode
+shellcheck:
+	find root src -type f -exec grep -l -E "^#! *(/usr/|)/bin/(ba|)sh" \{\} \; | xargs -I% bash -c "echo 'Checking errors in %...' && shellcheck --severity=error %"
+	find root src -type f -exec grep -l -E "^#! *(/usr/|)/bin/(ba|)sh" \{\} \; | xargs -I% bash -c "echo 'Checking warnings in %...' && shellcheck %" || true
+
+.PHONY: build all clean shellcheck
