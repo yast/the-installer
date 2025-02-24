@@ -74,7 +74,7 @@ module Agama
 
       # Storage config according to the JSON schema from the current proposal.
       #
-      # @return [Hash, nil] nil if there is no proposal yet.
+      # @return [Hash] empty if there is no proposal yet.
       def storage_json
         case strategy
         when ProposalStrategies::Guided
@@ -89,6 +89,8 @@ module Agama
           source_json || {
             legacyAutoyastStorage: JSON.parse(strategy.settings.to_json, symbolize_names: true)
           }
+        else
+          {}
         end
       end
 
